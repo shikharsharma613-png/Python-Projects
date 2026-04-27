@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 import pyodbc
+import re
 
 window = tk.Tk()
 window.geometry("1350x700")
@@ -31,28 +32,74 @@ contact = tk.StringVar()
 dob = tk.StringVar()
 address = tk.StringVar()
 
-# ================= ENTRY FIELDS =================
 labels = ["Name", "Roll No", "Email", "Gender", "Class", "Contact", "DOB", "Address"]
 vars_ = [name, rollno, email, gender, class_var, contact, dob, address]
 
+# ================= ENTRY FIELDS =================
 for i in range(len(labels)):
-    tk.Label(Frame_Details, text=labels[i], font=("Times new roman", 17),
+    tk.Label(Frame_Details, text=labels[i],
+             font=("Times new roman", 17),
              bg="#e3f4f1").grid(row=i, column=0, padx=5, pady=5)
-    tk.Entry(Frame_Details, textvariable=vars_[i],
-             font=("Times new roman", 17), bd=5).grid(row=i, column=1, padx=5, pady=5)
 
-# ================= DATABASE CONNECTION =================
+    if labels[i] == "Gender":
+        gender_combo = ttk.Combobox(Frame_Details,
+                                   textvariable=gender,
+                                   font=("Times new roman", 17),
+                                   state="readonly")
+        gender_combo['values'] = ("Male", "Female", "Other")
+        gender_combo.grid(row=i, column=1, padx=5, pady=5)
+    else:
+        tk.Entry(Frame_Details,
+                 textvariable=vars_[i],
+                 font=("Times new roman", 17),
+                 bd=5).grid(row=i, column=1, padx=5, pady=5)
 
+# ================= DATABASE =================
 def get_connection():
     return pyodbc.connect(
         "DRIVER={ODBC Driver 17 for SQL Server};"
-        "SERVER=THINKBOOK\\SQLEXPRESS;"   # change if needed
+        "SERVER=THINKBOOK\\SQLEXPRESS;"
         "DATABASE=student_mng_system;"
         "Trusted_Connection=yes;"
     )
 
-# ================= CRUD FUNCTIONS =================
+# ================= VALIDATION =================
+def VALIDATE():
+    if not re.match(r"^[A-Za-z ]+$", name.get()):
+        messagebox.showerror("Error", "Invalid Name")
+        return False
 
+    if not rollno.get().isdigit():
+        messagebox.showerror("Error", "Roll No must be numeric")
+        return False
+
+    if not re.match(r"^[\w\.-]+@[\w\.-]+\.\w+$", email.get()):
+        messagebox.showerror("Error", "Invalid Email")
+        return False
+
+    if gender.get() not in ["Male", "Female", "Other"]:
+        messagebox.showerror("Error", "Select Gender")
+        return False
+
+    if class_var.get() == "":
+        messagebox.showerror("Error", "Class required")
+        return False
+
+    if not re.match(r"^\d{10}$", contact.get()):
+        messagebox.showerror("Error", "Contact must be 10 digits")
+        return False
+
+    if not re.match(r"^\d{2}/\d{2}/\d{4}$", dob.get()):
+        messagebox.showerror("Error", "DOB must be DD/MM/YYYY")
+        return False
+
+    if len(address.get()) < 5:
+        messagebox.showerror("Error", "Address too short")
+        return False
+
+    return True
+
+# ================= CRUD =================
 def GET_DATA():
     con = get_connection()
     cur = con.cursor()
@@ -68,8 +115,7 @@ def GET_DATA():
     con.close()
 
 def ADD_DATA():
-    if rollno.get() == "" or name.get() == "" or class_var.get() == "":
-        messagebox.showerror("Error", "All required fields must be filled")
+    if not VALIDATE():
         return
 
     con = get_connection()
@@ -89,6 +135,9 @@ def ADD_DATA():
     messagebox.showinfo("Success", "Record Added")
 
 def UPDATE_DATA():
+    if not VALIDATE():
+        return
+
     con = get_connection()
     cur = con.cursor()
 
